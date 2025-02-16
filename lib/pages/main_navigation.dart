@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'user_information_page.dart';
+import 'todo_list_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -16,6 +17,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _pages = const [
     HomePage(),
     UserInformationPage(), // This should show the profile view, not edit page
+    TodoListPage(),
   ];
 
   void _onItemTapped(int index) {
@@ -40,6 +42,10 @@ class _MainNavigationState extends State<MainNavigation> {
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list),
+            label: 'Todos',
           ),
         ],
         currentIndex: _selectedIndex,
