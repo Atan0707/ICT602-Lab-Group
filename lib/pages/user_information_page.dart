@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'edit_profile_page.dart';
 
 class UserInformationPage extends StatefulWidget {
   const UserInformationPage({super.key});
@@ -10,12 +11,8 @@ class UserInformationPage extends StatefulWidget {
 }
 
 class _UserInformationPageState extends State<UserInformationPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
-  bool _isLoading = false;
-  bool _isInitialized = false;
+  Map<String, dynamic>? userData;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -24,6 +21,10 @@ class _UserInformationPageState extends State<UserInformationPage> {
   }
 
   Future<void> _loadUserInformation() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -34,10 +35,8 @@ class _UserInformationPageState extends State<UserInformationPage> {
             
         if (doc.exists && mounted) {
           setState(() {
-            _fullNameController.text = doc.data()?['fullName'] ?? '';
-            _phoneController.text = doc.data()?['phone'] ?? '';
-            _addressController.text = doc.data()?['address'] ?? '';
-            _isInitialized = true;
+            userData = doc.data();
+            _isLoading = false;
           });
         }
       } catch (e) {
@@ -50,49 +49,9 @@ class _UserInformationPageState extends State<UserInformationPage> {
     }
   }
 
-  Future<void> _saveUserInformation() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .set({
-            'fullName': _fullNameController.text.trim(),
-            'phone': _phoneController.text.trim(),
-            'address': _addressController.text.trim(),
-            'email': user.email,
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Information saved successfully')),
-            );
-          }
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving information: $e')),
-        );
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (!_isInitialized && !_isLoading) {
+    if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -101,76 +60,69 @@ class _UserInformationPageState extends State<UserInformationPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
+        actions: userData != null ? [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () async {
+              final updated = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfilePage(userData: userData!),
+                ),
+              );
+              if (updated == true) {
+                _loadUserInformation();
+              }
+            },
+          ),
+        ] : null,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _fullNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Full Name',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your full name';
-                  }
-                  return null;
-                },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Center(
+              child: CircleAvatar(
+                radius: 50,
+                child: Icon(Icons.person, size: 50),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your phone number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Address',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your address';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: _saveUserInformation,
-                      child: const Text('Save Information'),
-                    ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+            _buildProfileItem('Full Name', userData?['fullName'] ?? 'Not set'),
+            _buildProfileItem('Email', userData?['email'] ?? 'Not set'),
+            _buildProfileItem('Phone', userData?['phone'] ?? 'Not set'),
+            _buildProfileItem('Address', userData?['address'] ?? 'Not set'),
+          ],
         ),
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _fullNameController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
-    super.dispose();
+  Widget _buildProfileItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Divider(),
+        ],
+      ),
+    );
   }
 } 

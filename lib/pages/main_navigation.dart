@@ -12,9 +12,10 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
+  // Keep track of page states
   final List<Widget> _pages = const [
     HomePage(),
-    UserInformationPage(),
+    UserInformationPage(), // This should show the profile view, not edit page
   ];
 
   void _onItemTapped(int index) {
@@ -26,7 +27,10 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: IndexedStack(  // Using IndexedStack to preserve page states
+        index: _selectedIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
