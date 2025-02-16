@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "750129483340",
+    "firebase_url": "https://lab-group-1d84a-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "lab-group-1d84a",
+    "storage_bucket": "lab-group-1d84a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:750129483340:android:b4008d463affc96936eee9",
+        "android_client_info": {
+          "package_name": "com.example.lab_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCefIgJobtTrKeUOiSTurj0F2PaqUVgk4s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:750129483340:android:bf13506844911e4a36eee9",
+        "android_client_info": {
+          "package_name": "com.example.lab_group"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCefIgJobtTrKeUOiSTurj0F2PaqUVgk4s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
