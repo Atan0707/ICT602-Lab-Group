@@ -33,9 +33,9 @@ class _UserInformationPageState extends State<UserInformationPage> {
             .doc(user.uid)
             .get();
             
-        if (doc.exists && mounted) {
+        if (mounted) {
           setState(() {
-            userData = doc.data();
+            userData = doc.exists ? doc.data() : null;
             _isLoading = false;
           });
         }
@@ -44,6 +44,9 @@ class _UserInformationPageState extends State<UserInformationPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error loading information: $e')),
           );
+          setState(() {
+            _isLoading = false;
+          });
         }
       }
     }
@@ -57,10 +60,46 @@ class _UserInformationPageState extends State<UserInformationPage> {
       );
     }
 
+    if (userData == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Profile'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'No profile information found',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  final updated = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditProfilePage(
+                        userData: const {},
+                      ),
+                    ),
+                  );
+                  if (updated == true) {
+                    _loadUserInformation();
+                  }
+                },
+                child: const Text('Add Profile'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        actions: userData != null ? [
+        actions: [
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () async {
@@ -75,7 +114,7 @@ class _UserInformationPageState extends State<UserInformationPage> {
               }
             },
           ),
-        ] : null,
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
