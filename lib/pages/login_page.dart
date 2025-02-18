@@ -39,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
         }
       } on FirebaseAuthException catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? 'An error occurred')),
+          SnackBar(content: Text(e.message ?? 'An error occurred: ${e.code}')),
         );
       } finally {
         if (mounted) {
