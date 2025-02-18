@@ -25,42 +25,60 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _addressController.text = widget.userData['address'] ?? '';
   }
 
-  Future<void> _saveUserInformation() async {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _saveChanges() async {
+    try {
       setState(() {
         _isLoading = true;
       });
 
-      try {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .update({
-            'fullName': _fullNameController.text.trim(),
-            'phone': _phoneController.text.trim(),
-            'address': _addressController.text.trim(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
+      // Get current user
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('No user logged in');
+      }
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profile updated successfully')),
-            );
-            Navigator.pop(context, true);
-          }
-        }
-      } catch (e) {
+      // Reference to user document
+      final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+      // Check if document exists
+      final docSnapshot = await userDoc.get();
+      
+      if (!docSnapshot.exists) {
+        // Create the document if it doesn't exist
+        await userDoc.set({
+          'fullName': _fullNameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'address': _addressController.text.trim(),
+          'email': user.email,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Update existing document
+        await userDoc.update({
+          'fullName': _fullNameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'address': _addressController.text.trim(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating profile: $e')),
         );
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -125,7 +143,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                      onPressed: _saveUserInformation,
+                      onPressed: _saveChanges,
                       child: const Text('Save Changes'),
                     ),
             ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'home_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -23,10 +24,21 @@ class _SignupPageState extends State<SignupPage> {
       });
 
       try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+        
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+          'email': _emailController.text.trim(),
+          'fullName': '',  // or collect this during signup
+          'phoneNumber': '',
+          'address': '',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
         
         if (mounted) {
           Navigator.pushReplacement(
