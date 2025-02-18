@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'trash_page.dart';
 
 class TodoListPage extends StatefulWidget {
   const TodoListPage({super.key});
@@ -187,6 +188,66 @@ class _TodoListPageState extends State<TodoListPage> {
     }
   }
 
+  Future<void> _deleteMultipleTodos(List<String> ids, {bool permanent = false}) async {
+    try {
+      final batch = _firestore.batch();
+      
+      if (permanent) {
+        // Show confirmation dialog
+        final bool? confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Confirm Deletion'),
+            content: const Text('Are you sure you want to permanently delete these items?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm != true) return;
+
+        // Add delete operations to batch
+        for (String id in ids) {
+          final docRef = _firestore.collection('todos').doc(id);
+          batch.delete(docRef);
+        }
+      } else {
+        // Soft delete - mark as deleted
+        for (String id in ids) {
+          final docRef = _firestore.collection('todos').doc(id);
+          batch.update(docRef, {'isDeleted': true});
+        }
+      }
+
+      // Commit the batch
+      await batch.commit();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(permanent 
+              ? '${ids.length} items permanently deleted' 
+              : '${ids.length} items moved to trash'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting todos: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width > 600;
@@ -195,15 +256,32 @@ class _TodoListPageState extends State<TodoListPage> {
       appBar: AppBar(
         title: const Text('Todo List'),
         actions: [
-          if (_isSelectionMode) ...[
+          if (!_isSelectionMode)
             IconButton(
               icon: const Icon(Icons.delete_outline),
-              onPressed: () => _deleteSelected(permanent: false),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TrashPage()),
+                );
+              },
+              tooltip: 'View trash',
+            ),
+          if (_isSelectionMode) ...[
+            Text('${_selectedItems.length} selected  ', 
+              style: Theme.of(context).textTheme.bodyLarge),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _selectedItems.isEmpty 
+                ? null 
+                : () => _deleteMultipleTodos(_selectedItems.toList(), permanent: false),
               tooltip: 'Move selected to trash',
             ),
             IconButton(
               icon: const Icon(Icons.delete_forever),
-              onPressed: () => _deleteSelected(permanent: true),
+              onPressed: _selectedItems.isEmpty 
+                ? null 
+                : () => _deleteMultipleTodos(_selectedItems.toList(), permanent: true),
               tooltip: 'Delete selected permanently',
             ),
             IconButton(
@@ -321,6 +399,27 @@ class _TodoListPageState extends State<TodoListPage> {
               },
             )
           : null,
+      trailing: _isSelectionMode
+          ? null
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () {
+                    setState(() {
+                      _isEditing = true;
+                      _editingId = id;
+                      _todoController.text = todo['title'] as String;
+                    });
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => _deleteTodo(id, permanent: false),
+                ),
+              ],
+            ),
       onLongPress: () {
         setState(() {
           _isSelectionMode = true;
@@ -341,31 +440,6 @@ class _TodoListPageState extends State<TodoListPage> {
               });
             }
           : null,
-      trailing: _isSelectionMode
-          ? null
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () {
-                    setState(() {
-                      _isEditing = true;
-                      _editingId = id;
-                      _todoController.text = todo['title'] as String;
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => _deleteTodo(id, permanent: false),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_forever),
-                  onPressed: () => _deleteTodo(id, permanent: true),
-                ),
-              ],
-            ),
     );
   }
 }
