@@ -54,7 +54,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       };
 
       if (!docSnapshot.exists) {
-        userData['email'] = user.email;
+        userData['email'] = user.email ?? '';
         userData['createdAt'] = FieldValue.serverTimestamp();
         await userDoc.set(userData);
       } else {

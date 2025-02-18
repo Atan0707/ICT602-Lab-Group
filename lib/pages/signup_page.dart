@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'home_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'main_navigation.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -35,15 +36,17 @@ class _SignupPageState extends State<SignupPage> {
             .set({
           'email': _emailController.text.trim(),
           'fullName': '',  // or collect this during signup
-          'phoneNumber': '',
+          'phone': '',
           'address': '',
           'createdAt': FieldValue.serverTimestamp(),
         });
         
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const MainNavigation(),
+            ),
+            (route) => false,
           );
         }
       } on FirebaseAuthException catch (e) {
