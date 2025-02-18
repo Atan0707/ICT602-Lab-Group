@@ -11,130 +11,84 @@ class UserInformationPage extends StatefulWidget {
 }
 
 class _UserInformationPageState extends State<UserInformationPage> {
-  Map<String, dynamic>? userData;
-  bool _isLoading = true;
-
+  late Stream<DocumentSnapshot> _userStream;
+  
   @override
   void initState() {
     super.initState();
-    _loadUserInformation();
+    _initUserStream();
   }
 
-  Future<void> _loadUserInformation() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  void _initUserStream() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      try {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-            
-        if (mounted) {
-          setState(() {
-            userData = doc.exists ? doc.data() : null;
-            _isLoading = false;
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error loading information: $e')),
-          );
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      }
+      _userStream = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots();
     }
+  }
+
+  void _refreshUserData() {
+    setState(() {
+      _initUserStream();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _userStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
 
-    if (userData == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Profile'),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'No profile information found',
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () async {
-                  final updated = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EditProfilePage(
-                        userData: const {},
-                      ),
-                    ),
-                  );
-                  if (updated == true) {
-                    _loadUserInformation();
-                  }
-                },
-                child: const Text('Add Profile'),
-              ),
-            ],
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final userData = snapshot.data?.data() as Map<String, dynamic>? ?? {};
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Profile'),
           ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () async {
-              final updated = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditProfilePage(userData: userData!),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(
+                  child: CircleAvatar(
+                    radius: 50,
+                    child: Icon(Icons.person, size: 50),
+                  ),
                 ),
-              );
-              if (updated == true) {
-                _loadUserInformation();
-              }
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Center(
-              child: CircleAvatar(
-                radius: 50,
-                child: Icon(Icons.person, size: 50),
-              ),
+                const SizedBox(height: 24),
+                _buildProfileItem('Full Name', userData['fullName'] ?? 'Not set'),
+                _buildProfileItem('Email', userData['email'] ?? 'Not set'),
+                _buildProfileItem('Phone', userData['phone'] ?? 'Not set'),
+                _buildProfileItem('Address', userData['address'] ?? 'Not set'),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditProfilePage(
+                          userData: userData,
+                          onProfileUpdate: _refreshUserData,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Edit Profile'),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            _buildProfileItem('Full Name', userData?['fullName'] ?? 'Not set'),
-            _buildProfileItem('Email', userData?['email'] ?? 'Not set'),
-            _buildProfileItem('Phone', userData?['phone'] ?? 'Not set'),
-            _buildProfileItem('Address', userData?['address'] ?? 'Not set'),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

@@ -4,7 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfilePage extends StatefulWidget {
   final Map<String, dynamic> userData;
-  const EditProfilePage({super.key, required this.userData});
+  final Function() onProfileUpdate;
+  const EditProfilePage({
+    super.key, 
+    required this.userData,
+    required this.onProfileUpdate,
+  });
 
   @override
   State<EditProfilePage> createState() => _EditProfilePageState();
@@ -26,47 +31,43 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _saveChanges() async {
+    if (!_formKey.currentState!.validate()) return;
+    
     try {
       setState(() {
         _isLoading = true;
       });
 
-      // Get current user
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('No user logged in');
       }
 
-      // Reference to user document
       final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
-
-      // Check if document exists
       final docSnapshot = await userDoc.get();
       
+      final userData = {
+        'fullName': _fullNameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'address': _addressController.text.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
       if (!docSnapshot.exists) {
-        // Create the document if it doesn't exist
-        await userDoc.set({
-          'fullName': _fullNameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'address': _addressController.text.trim(),
-          'email': user.email,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+        userData['email'] = user.email;
+        userData['createdAt'] = FieldValue.serverTimestamp();
+        await userDoc.set(userData);
       } else {
-        // Update existing document
-        await userDoc.update({
-          'fullName': _fullNameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'address': _addressController.text.trim(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+        await userDoc.update(userData);
       }
+
+      widget.onProfileUpdate();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully')),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
