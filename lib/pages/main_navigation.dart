@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart';
+import 'home_page.dart'; 
 import 'user_information_page.dart';
 import 'todo_list_page.dart';
+import 'hardware_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -18,6 +19,7 @@ class _MainNavigationState extends State<MainNavigation> {
     HomePage(),
     UserInformationPage(), // This should show the profile view, not edit page
     TodoListPage(),
+    HardwarePage(),
   ];
 
   void _onItemTapped(int index) {
@@ -44,9 +46,14 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.list),
             label: 'Todos',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.hardware),
+            label: 'Hardware',
+          ),
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
       ),
     );
   }

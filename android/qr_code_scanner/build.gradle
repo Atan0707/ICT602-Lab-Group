@@ -1,0 +1,4 @@
+android {
+    // ... other configurations ...
+    namespace "com.example.qr_code_scanner"
+} 
