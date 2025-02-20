@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'camera_page.dart';
 import 'gps_page.dart';
 import 'bluetooth_page.dart';
+import 'microphone_page.dart';
 
 class HardwarePage extends StatefulWidget {
   const HardwarePage({super.key});
@@ -60,7 +61,12 @@ class _HardwarePageState extends State<HardwarePage> {
             icon: Icons.mic,
             title: 'Microphone',
             onTap: () {
-              // TODO: Implement microphone access
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MicrophonePage(),
+                ),
+              );
             },
           ),
           _buildHardwareButton(

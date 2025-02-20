@@ -18,56 +18,32 @@ class _BluetoothPageState extends State<BluetoothPage> {
   List<BluetoothDevice> _devicesList = [];
   BluetoothDevice? _connectedDevice;
   BluetoothConnection? _connection;
-  bool _isDiscovering = false;
-  StreamSubscription<BluetoothDiscoveryResult>? _discoveryStreamSubscription;
+  bool _isLoading = false;
   bool _isConnecting = false;
   bool _isDisconnecting = false;
 
   @override
   void initState() {
     super.initState();
-    _checkBluetoothStatus();
+    _loadPairedDevices();
   }
 
   @override
   void dispose() {
-    _discoveryStreamSubscription?.cancel();
     _disconnect();
     super.dispose();
   }
 
-  Future<void> _checkBluetoothStatus() async {
-    bool? isEnabled = await bluetooth.isEnabled;
-    if (isEnabled != true) {
-      await bluetooth.requestEnable();
+  Future<void> _loadPairedDevices() async {
+    setState(() => _isLoading = true);
+    try {
+      _devicesList = await bluetooth.getBondedDevices();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading paired devices: $e')),
+      );
     }
-    _startDiscovery();
-  }
-
-  void _startDiscovery() {
-    setState(() {
-      _devicesList.clear();
-      _isDiscovering = true;
-    });
-
-    _discoveryStreamSubscription?.cancel();
-    _discoveryStreamSubscription = bluetooth.startDiscovery().listen((result) {
-      setState(() {
-        final existingIndex = _devicesList.indexWhere(
-            (device) => device.address == result.device.address);
-        if (existingIndex >= 0) {
-          _devicesList[existingIndex] = result.device;
-        } else {
-          _devicesList.add(result.device);
-        }
-      });
-    });
-
-    _discoveryStreamSubscription?.onDone(() {
-      setState(() {
-        _isDiscovering = false;
-      });
-    });
+    setState(() => _isLoading = false);
   }
 
   Future<void> _connect(BluetoothDevice device) async {
@@ -175,18 +151,29 @@ class _BluetoothPageState extends State<BluetoothPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bluetooth'),
+        title: const Text('Paired Devices'),
         actions: [
-          if (!_isDiscovering)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _startDiscovery,
-              tooltip: 'Refresh devices',
-            ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadPairedDevices,
+            tooltip: 'Refresh paired devices',
+          ),
         ],
       ),
       body: Column(
         children: [
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_devicesList.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(
+                child: Text('No paired devices found. Pair devices in system settings.'),
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               itemCount: _devicesList.length,
@@ -214,13 +201,6 @@ class _BluetoothPageState extends State<BluetoothPage> {
               },
             ),
           ),
-          if (_isDiscovering)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
-            ),
           if (_connectedDevice != null)
             Padding(
               padding: const EdgeInsets.all(16.0),
