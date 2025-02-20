@@ -119,62 +119,71 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
           // Pause scanning
           controller.pauseCamera();
 
-          // Check if the scanned data is a URL
-          bool isUrl = Uri.tryParse(code)?.hasAbsolutePath ?? false;
-          
-          if (isUrl) {
-            // Show a dialog to confirm opening the URL
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Open URL?'),
-                content: Text('Would you like to open: $code'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      controller.resumeCamera(); // Resume scanning
-                    },
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      final url = Uri.parse(code);
-                      if (await canLaunchUrl(url)) {
-                        await launchUrl(url);
+          // Show a dialog to confirm opening in browser
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Open in Browser?'),
+              content: Text(code),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    controller.resumeCamera(); // Resume scanning
+                  },
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    try {
+                      // Prepare URL string
+                      String urlString = code.trim();
+                      if (!urlString.toLowerCase().startsWith('http')) {
+                        urlString = 'https://$urlString';
+                      }
+                      debugPrint('Attempting to open URL: $urlString'); // Debug log
+
+                      final uri = Uri.parse(urlString);
+                      final canLaunch = await canLaunchUrl(uri);
+                      debugPrint('Can launch URL: $canLaunch'); // Debug log
+
+                      if (canLaunch) {
+                        final launched = await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                          webViewConfiguration: const WebViewConfiguration(
+                            enableJavaScript: true,
+                            enableDomStorage: true,
+                          ),
+                        );
+                        debugPrint('Launch result: $launched'); // Debug log
+                        
+                        if (!launched && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not open the URL')),
+                          );
+                        }
                       } else {
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Could not open URL')),
+                          const SnackBar(content: Text('URL is not launchable')),
                         );
                       }
-                      controller.resumeCamera(); // Resume scanning
-                    },
-                    child: const Text('Open'),
-                  ),
-                ],
-              ),
-            ).then((_) => controller.resumeCamera()); // Resume if dialog is dismissed
-          } else {
-            // Show the scanned text in a dialog
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Scanned Content'),
-                content: Text(code),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      controller.resumeCamera(); // Resume scanning
-                    },
-                    child: const Text('Close'),
-                  ),
-                ],
-              ),
-            ).then((_) => controller.resumeCamera()); // Resume if dialog is dismissed
-          }
+                    } catch (e) {
+                      debugPrint('Error launching URL: $e'); // Debug log
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: ${e.toString()}')),
+                      );
+                    }
+                    controller.resumeCamera(); // Resume scanning
+                  },
+                  child: const Text('Open'),
+                ),
+              ],
+            ),
+          ).then((_) => controller.resumeCamera()); // Resume if dialog is dismissed
         });
       },
     );
