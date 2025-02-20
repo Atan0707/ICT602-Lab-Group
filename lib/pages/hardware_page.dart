@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'camera_page.dart';
+import 'gps_page.dart';
 
 class HardwarePage extends StatefulWidget {
   const HardwarePage({super.key});
@@ -34,7 +35,12 @@ class _HardwarePageState extends State<HardwarePage> {
             icon: Icons.location_on,
             title: 'GPS Location',
             onTap: () {
-              // TODO: Implement GPS access
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GPSPage(),
+                ),
+              );
             },
           ),
           _buildHardwareButton(
