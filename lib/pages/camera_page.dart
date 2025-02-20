@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -109,11 +110,71 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
       key: qrKey,
       onQRViewCreated: (QRViewController controller) {
         qrViewController = controller;
-        controller.scannedDataStream.listen((scanData) {
+        controller.scannedDataStream.listen((scanData) async {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('QR Code: ${scanData.code}')),
-          );
+          
+          final code = scanData.code;
+          if (code == null) return;
+
+          // Pause scanning
+          controller.pauseCamera();
+
+          // Check if the scanned data is a URL
+          bool isUrl = Uri.tryParse(code)?.hasAbsolutePath ?? false;
+          
+          if (isUrl) {
+            // Show a dialog to confirm opening the URL
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Open URL?'),
+                content: Text('Would you like to open: $code'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      controller.resumeCamera(); // Resume scanning
+                    },
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      final url = Uri.parse(code);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url);
+                      } else {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not open URL')),
+                        );
+                      }
+                      controller.resumeCamera(); // Resume scanning
+                    },
+                    child: const Text('Open'),
+                  ),
+                ],
+              ),
+            ).then((_) => controller.resumeCamera()); // Resume if dialog is dismissed
+          } else {
+            // Show the scanned text in a dialog
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Scanned Content'),
+                content: Text(code),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      controller.resumeCamera(); // Resume scanning
+                    },
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            ).then((_) => controller.resumeCamera()); // Resume if dialog is dismissed
+          }
         });
       },
     );
