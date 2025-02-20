@@ -38,6 +38,7 @@ dependencies:
   firebase_auth: ^5.3.1
   firebase_database: ^11.1.4
   cloud_firestore: 5.6.3
+  google_sign_in: ^6.2.2
   camera: ^0.10.5+9
   qr_code_scanner_plus: ^2.0.10+1
   path_provider: ^2.1.2

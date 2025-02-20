@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 import 'signup_page.dart';
 import 'main_navigation.dart';
 
@@ -14,6 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
   bool _isLoading = false;
 
   Future<void> _login() async {
@@ -45,6 +47,33 @@ class _LoginPageState extends State<LoginPage> {
             _isLoading = false;
           });
         }
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final userCredential = await _authService.signInWithGoogle();
+      if (userCredential != null && mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const MainNavigation(),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to sign in with Google')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -93,10 +122,32 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 24),
               _isLoading
                   ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                      onPressed: _login,
-                      child: const Text('Login'),
+                  : Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: _login,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(50),
+                          ),
+                          child: const Text('Login'),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('OR', style: TextStyle(color: Colors.grey)),
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          onPressed: _signInWithGoogle,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(50),
+                          ),
+                          icon: Image.network(
+                            'https://www.google.com/favicon.ico',
+                            height: 24,
+                          ),
+                          label: const Text('Sign in with Google'),
+                        ),
+                      ],
                     ),
+              const SizedBox(height: 16),
               TextButton(
                 onPressed: () {
                   Navigator.push(
