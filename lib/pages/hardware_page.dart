@@ -3,6 +3,7 @@ import 'camera_page.dart';
 import 'gps_page.dart';
 import 'bluetooth_page.dart';
 import 'microphone_page.dart';
+import 'accelerometer_page.dart';
 
 class HardwarePage extends StatefulWidget {
   const HardwarePage({super.key});
@@ -73,7 +74,12 @@ class _HardwarePageState extends State<HardwarePage> {
             icon: Icons.screen_rotation,
             title: 'Accelerometer',
             onTap: () {
-              // TODO: Implement accelerometer access
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AccelerometerPage(),
+                ),
+              );
             },
           ),
         ],

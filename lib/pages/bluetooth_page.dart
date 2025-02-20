@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
 class BluetoothPage extends StatefulWidget {
@@ -21,17 +22,58 @@ class _BluetoothPageState extends State<BluetoothPage> {
   bool _isLoading = false;
   bool _isConnecting = false;
   bool _isDisconnecting = false;
+  bool _permissionsGranted = false;
 
   @override
   void initState() {
     super.initState();
-    _loadPairedDevices();
+    _checkAndRequestPermissions();
   }
 
   @override
   void dispose() {
     _disconnect();
     super.dispose();
+  }
+
+  Future<void> _checkAndRequestPermissions() async {
+    if (Platform.isAndroid) {
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.bluetooth,
+        Permission.bluetoothScan,
+        Permission.bluetoothConnect,
+        Permission.bluetoothAdvertise,
+        Permission.location,
+      ].request();
+
+      bool allGranted = true;
+      statuses.forEach((permission, status) {
+        if (!status.isGranted) {
+          allGranted = false;
+        }
+      });
+
+      setState(() {
+        _permissionsGranted = allGranted;
+      });
+
+      if (allGranted) {
+        _loadPairedDevices();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bluetooth permissions are required to use this feature'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } else if (Platform.isIOS) {
+      // iOS permissions are handled through Info.plist
+      setState(() {
+        _permissionsGranted = true;
+      });
+      _loadPairedDevices();
+    }
   }
 
   Future<void> _loadPairedDevices() async {
@@ -149,6 +191,41 @@ class _BluetoothPageState extends State<BluetoothPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_permissionsGranted) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Bluetooth Access'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.bluetooth_disabled,
+                size: 64,
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Bluetooth permissions required',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Please grant Bluetooth permissions to use this feature',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _checkAndRequestPermissions,
+                child: const Text('Request Permissions'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paired Devices'),
