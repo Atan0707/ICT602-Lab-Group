@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'camera_page.dart';
 import 'gps_page.dart';
+import 'bluetooth_page.dart';
 
 class HardwarePage extends StatefulWidget {
   const HardwarePage({super.key});
@@ -47,7 +48,12 @@ class _HardwarePageState extends State<HardwarePage> {
             icon: Icons.bluetooth,
             title: 'Bluetooth',
             onTap: () {
-              // TODO: Implement Bluetooth access
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BluetoothPage(),
+                ),
+              );
             },
           ),
           _buildHardwareButton(
