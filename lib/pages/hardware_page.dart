@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'camera_page.dart';
 
 class HardwarePage extends StatefulWidget {
   const HardwarePage({super.key});
@@ -21,7 +22,12 @@ class _HardwarePageState extends State<HardwarePage> {
             icon: Icons.camera_alt,
             title: 'Camera',
             onTap: () {
-              // TODO: Implement camera access
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CameraPage(),
+                ),
+              );
             },
           ),
           _buildHardwareButton(
